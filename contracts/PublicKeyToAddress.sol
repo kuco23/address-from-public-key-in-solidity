@@ -50,13 +50,9 @@ contract PublicKeyToAddress is EC {
         return publicKey;
     }
 
-    function publicKeyBytePrefix(bool evenY) internal pure returns (bytes memory prefix) {
-        prefix = new bytes(1);
-        bytes1 bytes1Prefix = evenY ? bytes1(0x02) : bytes1(0x03);
-        assembly {
-            mstore(add(prefix, 32), bytes1Prefix)
-        }
-        return prefix;
+    function publicKeyBytePrefix(bool evenY) internal pure returns (bytes memory) {
+        // convert byte1 to bytes
+        return abi.encodePacked(evenY ? bytes1(0x02) : bytes1(0x03));
     }
 
     function powmod(uint256 x, uint256 n, uint256 p) private pure returns (uint256) {
