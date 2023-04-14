@@ -41,10 +41,19 @@ describe("Tests for address derivation from public key", async () => {
     }
   })
 
+  it("should test public key decompression", async () => {
+    const privateKey = "8944ff161a80575ff14b2216fd7c19edc085f2d4a3c00a923ffc77ce64d6ffa7"
+    const pubpair = privateKeyToPublicKeypair(privateKey)
+    const compressedPublicKey = privateKeyToKeypair(privateKey).getPublic(true, 'hex').padStart(66, '0')
+    const decompressedPublicKey = await publicKeyToAddress.decompressPublicKey(Buffer.from(compressedPublicKey, 'hex'))
+    expect(decompressedPublicKey[0].toString()).to.equal(pubpair[0])
+    expect(decompressedPublicKey[1].toString()).to.equal(pubpair[1])
+  });
+
   it("should test the public key compression", async () => {
     const privateKey = "8944ff161a80575ff14b2216fd7c19edc085f2d4a3c00a923ffc77ce64d6ffa7"
     const pubpair = privateKeyToPublicKeypair(privateKey)
-    const keypair = privateKeyToKeypair(privateKey)
+    const keypair =privateKeyToKeypair(privateKey)
     const publicKey = Buffer.from(keypair.getPublic(true, 'hex').padStart(66, '0'), 'hex')
     const resp = await publicKeyToAddress.compressPublicKey(pubpair[0], pubpair[1])
     expect(resp).to.equal(`0x${publicKey.toString('hex')}`)
