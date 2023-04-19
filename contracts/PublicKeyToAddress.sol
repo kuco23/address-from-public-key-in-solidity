@@ -40,7 +40,7 @@ contract PublicKeyToAddress is EC {
         returns (bytes20)
     {
         bytes memory compressedPublicKey = publicKey;
-        if (publicKey[0] != bytes1(0x04)) {
+        if (publicKey[0] == bytes1(0x04)) {
             (uint256 x, uint256 y) = extractPublicKeyPair(publicKey);
             compressedPublicKey = compressPublicKey(x, y);
         }

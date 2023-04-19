@@ -3,53 +3,44 @@ import { sha256, keccak, ripemd160 } from 'ethereumjs-util';
 import { bech32 } from "bech32"
 import * as elliptic from "elliptic"
 
-const EC: typeof elliptic.ec = elliptic.ec
-const ec: elliptic.ec = new EC("secp256k1")
+import BN from "bn.js";
 
-export function generatePrivateKey() {
-  const privateKey = crypto.randomBytes(32);
-  return privateKey.toString('hex');
+const EC: typeof elliptic.ec = elliptic.ec;
+const ec: elliptic.ec = new EC("secp256k1");
+
+export function randomPrivateKey() {
+  return crypto.randomBytes(32);
 }
 
-export function privateKeyToPublicKeypair(prvk: string) {
-  const _keypair = ec.keyFromPrivate(prvk).getPublic()
-  return [_keypair.getX().toString(), _keypair.getY().toString()]
+export function privateKeyToPublicKey(privateKey: Buffer): Buffer[] {
+  const keyPair = ec.keyFromPrivate(privateKey).getPublic();
+  const x = keyPair.getX().toBuffer(undefined, 32);
+  const y = keyPair.getY().toBuffer(undefined, 32);
+  return [x, y];
 }
 
-export function privateKeyToPublicKey(prvk: string) {
-  return ec.keyFromPrivate(prvk).getPublic()
+export function compressPublicKey(x: Buffer, y: Buffer): Buffer {
+  const prefix = ((new BN(y)).isEven()) ? 0x02 : 0x03;
+  return Buffer.concat([Buffer.from([prefix]), x]);
 }
 
-export function privateKeyToKeypair(prvk: string) {
-  return ec.keyFromPrivate(prvk)
+export function encodePublicKey(x: Buffer, y: Buffer, compress: boolean): Buffer {
+  return (compress) ? compressPublicKey(x, y) : Buffer.concat([Buffer.from([0x04]), x, y]);
 }
 
-export const compressPublicKey = (pubKeyUncompressed: string): string => {
-  return (parseInt(pubKeyUncompressed.slice(130, 132), 16) % 2 === 0 ? '02' : '03') + pubKeyUncompressed.slice(2, 66);
+export function publicKeyToEthereumAddress(x: Buffer, y: Buffer) {
+  return keccak(Buffer.concat([x, y])).slice(-20);
 }
 
-function publicKeyToEthereumAddress(pubk: Buffer) {
-  if (pubk.length != 64) throw new Error("need uncompressed public key without type flag")
-  return keccak(pubk).slice(-20)
+export function publicKeyToAvalancheAddress(x: Buffer, y: Buffer) {
+  const compressed = compressPublicKey(x, y);
+  return ripemd160(sha256(compressed), false);
 }
 
-function publicKeyToAvalancheAddress(pubk: Buffer) {
-  if (pubk.length != 33) throw new Error("need compressed public key")
-  return ripemd160(sha256(pubk), false)
+export function ethereumAddressToString(address: Buffer) {
+    return `0x${address.toString('hex')}`
 }
 
-const avalancheAddressToString = (hrp: string, chainid: string, bytes: Buffer) =>
-  `${chainid}-${bech32.encode(hrp, bech32.toWords(bytes))}`
-
-export function publicKeyToEthereumAddressString(pubk: elliptic.curve.base.BasePoint) {
-    const ethPubk = Buffer.from(pubk.encode('hex', false).padStart(66, "0"), "hex").slice(1)
-    return publicKeyToEthereumAddress(ethPubk).toString('hex')
-}
-
-export function publicKeyToAvalancheAddressString(
-    hrp: string, chainid: string, pubk: elliptic.curve.base.BasePoint
-) {
-    const avaPubk = Buffer.from(pubk.encode('hex', true).padStart(66, "0"), "hex")
-    const avaAddr = publicKeyToAvalancheAddress(avaPubk)
-    return avalancheAddressToString(hrp, chainid, avaAddr)
+export function avalancheAddressToString(hrp: string, chainId: string, address: Buffer) {
+  return `${chainId}-${bech32.encode(hrp, bech32.toWords(address))}`;
 }
