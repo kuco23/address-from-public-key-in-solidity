@@ -56,13 +56,13 @@ contract PublicKeyToAddress is EC {
             return (
                 uint256(BytesLib.toBytes32(encodedPublicKey, 0)),
                 uint256(BytesLib.toBytes32(encodedPublicKey, 32)));
-        } else if (encodedPublicKey.length == 65) {
+        } else {
             bytes1 prefix = encodedPublicKey[0];
-            if (prefix == bytes1(0x04)) {
+            if (encodedPublicKey.length == 65 && prefix == bytes1(0x04)) {
                 return (
                     uint256(BytesLib.toBytes32(encodedPublicKey, 1)),
                     uint256(BytesLib.toBytes32(encodedPublicKey, 33)));
-            } else {
+            } else if (encodedPublicKey.length == 33) {
                 uint256 x = uint256(BytesLib.toBytes32(encodedPublicKey, 1));
                 // Tonelli–Shanks algorithm for calculating square root modulo prime of x^3 + 7
                 uint256 y = powmod(mulmod(x, mulmod(x, x, p), p) + 7, (p + 1) / 4, p);
