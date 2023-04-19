@@ -39,11 +39,8 @@ contract PublicKeyToAddress is EC {
         public pure
         returns (bytes20)
     {
-        bytes memory compressedPublicKey = publicKey;
-        if (publicKey[0] == bytes1(0x04)) {
-            (uint256 x, uint256 y) = extractPublicKeyPair(publicKey);
-            compressedPublicKey = compressPublicKey(x, y);
-        }
+        (uint256 x, uint256 y) = extractPublicKeyPair(publicKey);
+        bytes memory compressedPublicKey = compressPublicKey(x, y);
         bytes32 sha = sha256(abi.encodePacked(compressedPublicKey));
         return ripemd160(abi.encodePacked(sha));
     }
@@ -54,23 +51,29 @@ contract PublicKeyToAddress is EC {
         internal pure
         returns (uint256, uint256)
     {
-        bytes1 prefix = encodedPublicKey[0];
-        if (prefix == bytes1(0x04)) {
+        if (encodedPublicKey.length == 64) {
+            // ethereum specific public key encoding
             return (
-                uint256(BytesLib.toBytes32(encodedPublicKey, 1)),
-                uint256(BytesLib.toBytes32(encodedPublicKey, 33)));
-        } else {
-            uint256 x = uint256(BytesLib.toBytes32(encodedPublicKey, 1));
-            // Tonelli–Shanks algorithm for calculating square root modulo prime of x^3 + 7
-            uint256 y = powmod(mulmod(x, mulmod(x, x, p), p) + 7, (p + 1) / 4, p);
-            if (prefix == bytes1(0x02)) {
-                return (x, (y % 2 == 0) ? y : p - y);
-            } else if (prefix == bytes1(0x03)) {
-                return (x, (y % 2 == 0) ? p - y : y);
+                uint256(BytesLib.toBytes32(encodedPublicKey, 0)),
+                uint256(BytesLib.toBytes32(encodedPublicKey, 32)));
+        } else if (encodedPublicKey.length == 65) {
+            bytes1 prefix = encodedPublicKey[0];
+            if (prefix == bytes1(0x04)) {
+                return (
+                    uint256(BytesLib.toBytes32(encodedPublicKey, 1)),
+                    uint256(BytesLib.toBytes32(encodedPublicKey, 33)));
             } else {
-                revert("Invalid public key prefix");
+                uint256 x = uint256(BytesLib.toBytes32(encodedPublicKey, 1));
+                // Tonelli–Shanks algorithm for calculating square root modulo prime of x^3 + 7
+                uint256 y = powmod(mulmod(x, mulmod(x, x, p), p) + 7, (p + 1) / 4, p);
+                if (prefix == bytes1(0x02)) {
+                    return (x, (y % 2 == 0) ? y : p - y);
+                } else if (prefix == bytes1(0x03)) {
+                    return (x, (y % 2 == 0) ? p - y : y);
+                }
             }
         }
+        revert("Invalid public key prefix");
     }
 
     function compressPublicKey(uint256 x, uint256 y) internal pure returns (bytes memory) {

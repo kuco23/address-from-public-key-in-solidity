@@ -1,6 +1,7 @@
 import { expect } from "chai"
 import { PublicKeyToAddressInstance } from "../typechain-truffle";
 import * as util from "../scripts/publicKeyToAddress";
+import { privateKeyToAvalancheAddress } from "../scripts/privateKeyToAddress";
 
 const PublicKeyToAddress = artifacts.require("PublicKeyToAddress");
 
@@ -24,7 +25,7 @@ describe("Tests for address derivation from public key", async () => {
   });
 
   // assumes that input address is encoded with prefix 0x04
-  it.only("should correctly derive avalanche address from public key", async () => {
+  it("should correctly derive avalanche address from public key", async () => {
     for (let i = 0; i < 100; i++) {
       const privateKey = util.randomPrivateKey();
       const [x, y] = util.privateKeyToPublicKey(privateKey);
@@ -41,11 +42,12 @@ describe("Tests for address derivation from public key", async () => {
     for (var i=0; i<prefix.length; i++) {
       hrp[i] = prefix.charCodeAt(i);
     }
-    /* for (let i = 0; i < 100; i++) {
-      const privateKey = randomPrivateKey();
-      const publicKey = Buffer.from(privateKeyToKeypair(privateKey).getPublic(true, 'hex'), 'hex');
-      const resp = await publicKeyToAddress.publicKeyToAvalancheAddressString(publicKey, prefix, hrp);
-      expect(resp).to.equal(privateKeyToAvalancheAddress(privateKey, "fuji"));
-    } */
+    for (let i = 0; i < 100; i++) {
+      const privateKey = util.randomPrivateKey();
+      const [x, y] = util.privateKeyToPublicKey(privateKey);
+      const encodedPublicKey = util.encodePublicKey(x, y, false);
+      const resp = await publicKeyToAddress.publicKeyToAvalancheAddressString(encodedPublicKey, prefix, hrp);
+      expect(resp).to.equal(privateKeyToAvalancheAddress(privateKey.toString('hex'), "fuji"));
+    }
   });
 });
