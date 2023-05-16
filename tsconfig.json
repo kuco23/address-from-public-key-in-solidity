@@ -9,14 +9,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "exclude": [
-    "node_modules"
-  ],
-  "include": [
-    "./test",
-    "./scripts",
-    "./typechain",
-    "./typechain-truffle"
-  ],
-  "files": ["./hardhat.config.ts"]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "build", "cache", "artifacts"]
 }

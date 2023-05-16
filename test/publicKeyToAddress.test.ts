@@ -1,5 +1,5 @@
-import { expect } from "chai"
-import { PublicKeyToAddressInstance } from "../typechain-truffle";
+import { expect } from "chai";
+import { PublicKeyToAddressInstance } from "../typechain-truffle/contracts/PublicKeyToAddress";
 import * as util from "../scripts/publicKeyToAddress";
 import { privateKeyToAvalancheAddress } from "../scripts/privateKeyToAddress";
 
@@ -23,7 +23,7 @@ describe("Tests for address derivation from public key", async () => {
         Buffer.concat([x, y])
       ];
       for (const publicKeyEncoding of publicKeyEncodings) {
-        const resp = await publicKeyToAddress.publicKeyToEthereumAddress(publicKeyEncoding);
+        const resp = await publicKeyToAddress.publicKeyToEthereumAddress(`0x${publicKeyEncoding.toString('hex')}`);
         expect(resp.toLowerCase()).to.equal(`0x${ethereumAddress.toString('hex')}`);
       }
     }
@@ -40,7 +40,7 @@ describe("Tests for address derivation from public key", async () => {
         Buffer.concat([x, y])
       ];
       for (const publicKeyEncoding of publicKeyEncodings) {
-        const resp = await publicKeyToAddress.publicKeyToAvalancheAddress(publicKeyEncoding);
+        const resp = await publicKeyToAddress.publicKeyToAvalancheAddress(`0x${publicKeyEncoding.toString('hex')}`);
         expect(resp).to.equal(`0x${avalancheAddress.toString('hex')}`);
       }
     }
@@ -56,7 +56,7 @@ describe("Tests for address derivation from public key", async () => {
       const privateKey = util.randomPrivateKey();
       const [x, y] = util.privateKeyToPublicKey(privateKey);
       const encodedPublicKey = util.encodePublicKey(x, y, false);
-      const resp = await publicKeyToAddress.publicKeyToAvalancheAddressString(encodedPublicKey, prefix, hrp);
+      const resp = await publicKeyToAddress.publicKeyToAvalancheAddressString(`0x${encodedPublicKey.toString('hex')}`, prefix, hrp);
       expect(resp).to.equal(privateKeyToAvalancheAddress(privateKey.toString('hex'), "fuji"));
     }
   });
