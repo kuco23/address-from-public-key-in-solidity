@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { PublicKeyToAddressInstance } from "../typechain-truffle/contracts/PublicKeyToAddress";
-import * as util from "../scripts/publicKeyToAddress";
-import { privateKeyToAvalancheAddress } from "../scripts/privateKeyToAddress";
+import * as util from "./lib/publicKeyToAddress";
+import { privateKeyToAvalancheAddress } from "./lib/privateKeyToAddress";
 
 const PublicKeyToAddress = artifacts.require("PublicKeyToAddress");
 
