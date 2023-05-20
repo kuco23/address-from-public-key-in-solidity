@@ -16,7 +16,8 @@ contract AddressValidator is Base58 {
         if (rippleAddress.length < 25 || rippleAddress.length > 35 || rippleAddress[0] != bytes1("r")) {
             return false;
         }
-        bytes memory decoded = decode(rippleAddress);
+        (bytes memory decoded, bool ok) = decode(rippleAddress);
+        if (!ok) return false;
         bytes memory checksum = BytesLib.slice(decoded, decoded.length - 4, 4);
         bytes memory accountID = BytesLib.slice(decoded, 0, decoded.length - 4);
         bytes memory accountChecksum = sha256Checksum(accountID);

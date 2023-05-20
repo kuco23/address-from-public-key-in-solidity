@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { AddressValidatorInstance } from "../typechain-truffle/contracts/AddressValidator";
-import { randomXrpAddress, randomAddress } from "./lib/addressGenerator";
+import { randomXrpAddress, randomBase58Address, randomAddress } from "./lib/addressGenerator";
 const cryptoAddressValidator = require("@swyftx/api-crypto-address-validator");
 
 function randint(min: number, max: number) {
@@ -35,7 +35,7 @@ describe("Tests for crypto address validation", () => {
   it("should fuzz test ripple address validation with invalid addresses", async () => {
     const ncases = 1000;
     for (let i = 0; i < ncases; i++) {
-      const address = randomAddress();
+      const address = randomBase58Address();
       const isValidSol = await addressValidator.validateRipple(address);
       const isValidJs = await cryptoAddressValidator.validate(address, "XRP");
       expect(isValidSol).to.equal(isValidJs);
@@ -49,6 +49,16 @@ describe("Tests for crypto address validation", () => {
       const tempered = replaceAt(address, randint(0, address.length - 1), xrpB58[randint(0, xrpB58.length - 1)]);
       const isValidSol = await addressValidator.validateRipple(tempered);
       const isValidJs = await cryptoAddressValidator.validate(tempered, "XRP");
+      expect(isValidSol).to.equal(isValidJs);
+    }
+  });
+
+  it("should fuzz test ripple address validation with non-base58 addresses", async () => {
+    const ncases = 1000;
+    for (let i = 0; i < ncases; i++) {
+      const address = randomAddress();
+      const isValidSol = await addressValidator.validateRipple(address);
+      const isValidJs = await cryptoAddressValidator.validate(address, "XRP");
       expect(isValidSol).to.equal(isValidJs);
     }
   });

@@ -11,49 +11,11 @@ contract Base58 {
     bytes constant ALPHABET = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz";
 
     /**
-     * @notice encode is used to encode the given bytes in base58 standard.
-     * @param data_ raw data, passed in as bytes.
-     * @return base58 encoded data_, returned as bytes.
-     */
-    function encode(bytes memory data_) public pure returns (bytes memory) {
-        unchecked {
-            uint256 size = data_.length;
-            uint256 zeroCount;
-            while (zeroCount < size && data_[zeroCount] == 0) {
-                zeroCount++;
-            }
-            size = zeroCount + ((size - zeroCount) * 8351) / 6115 + 1;
-            bytes memory slot = new bytes(size);
-            uint32 carry;
-            int256 m;
-            int256 high = int256(size) - 1;
-            for (uint256 i = 0; i < data_.length; i++) {
-                m = int256(size - 1);
-                for (carry = uint8(data_[i]); m > high || carry != 0; m--) {
-                    carry = carry + 256 * uint8(slot[uint256(m)]);
-                    slot[uint256(m)] = bytes1(uint8(carry % 58));
-                    carry /= 58;
-                }
-                high = m;
-            }
-            uint256 n;
-            for (n = zeroCount; n < size && slot[n] == 0; n++) {}
-            size = slot.length - (n - zeroCount);
-            bytes memory out = new bytes(size);
-            for (uint256 i = 0; i < size; i++) {
-                uint256 j = i + n - zeroCount;
-                out[i] = ALPHABET[uint8(slot[j])];
-            }
-            return out;
-        }
-    }
-
-    /**
      * @notice decode is used to decode the given string in base58 standard.
      * @param data_ data encoded with base58, passed in as bytes.
      * @return raw data, returned as bytes.
      */
-    function decode(bytes memory data_) public pure returns (bytes memory) {
+    function decode(bytes memory data_) public pure returns (bytes memory, bool) {
         unchecked {
             uint256 zero = 114;
             uint256 b58sz = data_.length;
@@ -67,7 +29,7 @@ contract Base58 {
             for (uint256 i = 0; i < data_.length; i++) {
                 bytes1 r = data_[i];
                 (c, f) = indexOf(ALPHABET, r);
-                require(f, "invalid base58 digit");
+                if (!f) return (new bytes(0), false);
                 for (int256 k = int256(outi.length) - 1; k >= 0; k--) {
                     t = uint64(outi[uint256(k)]) * 58 + c;
                     c = t >> 32;
@@ -93,46 +55,11 @@ contract Base58 {
             }
             for (uint256 msb = zcount; msb < binu.length; msb++) {
                 if (binu[msb] > 0) {
-                    return slice(binu, msb - zcount, outLen);
+                    return (slice(binu, msb - zcount, outLen), true);
                 }
             }
-            return slice(binu, 0, outLen);
+            return (slice(binu, 0, outLen), true);
         }
-    }
-
-    /**
-     * @notice encodeToString is used to encode the given byte in base58 standard.
-     * @param data_ raw data, passed in as bytes.
-     * @return base58 encoded data_, returned as a string.
-     */
-    function encodeToString(bytes memory data_) public pure returns (string memory) {
-        return string(encode(data_));
-    }
-
-    /**
-     * @notice encodeFromString is used to encode the given string in base58 standard.
-     * @param data_ raw data, passed in as a string.
-     * @return base58 encoded data_, returned as bytes.
-     */
-    function encodeFromString(string memory data_)
-        public
-        pure
-        returns (bytes memory)
-    {
-        return encode(bytes(data_));
-    }
-
-    /**
-     * @notice decode is used to decode the given string in base58 standard.
-     * @param data_ data encoded with base58, passed in as string.
-     * @return raw data, returned as bytes.
-     */
-    function decodeFromString(string memory data_)
-        public
-        pure
-        returns (bytes memory)
-    {
-        return decode(bytes(data_));
     }
 
     /**
