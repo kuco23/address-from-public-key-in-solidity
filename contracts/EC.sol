@@ -1,6 +1,8 @@
 // SPDPLicense-Identifier: MIT
 pragma solidity 0.8.11;
 
+import "./BytesLib.sol";
+
 contract EC {
 
     // Set parameters for secp256k1 curve.
@@ -343,76 +345,8 @@ contract EC {
         return multiplyScalar(gx, gy, scalar);
     }
 
-    /**
-     * @dev Validate combination of message, signature, and public key.
-     */
-    function validateSignature(bytes32 messageHash, uint[2] memory rs, uint[2] memory publicKey) public pure
-        returns (bool)
-    {
-        // To disambiguate between public key solutions, include comment below.
-        if(rs[0] == 0 || rs[0] >= n || rs[1] == 0 || rs[1] > lowSmax) {
-            return false;
-        }
-        if (!isOnCurve(publicKey[0], publicKey[1])) {
-            return false;
-        }
-
-        uint x1;
-        uint x2;
-        uint y1;
-        uint y2;
-
-        uint sInv = inverseMod(rs[1], n);
-        (x1, y1) = multiplyScalar(gx, gy, mulmod(uint(messageHash), sInv, n));
-        (x2, y2) = multiplyScalar(publicKey[0], publicKey[1], mulmod(rs[0], sInv, n));
-        uint[3] memory P = addAndReturnProjectivePoint(x1, y1, x2, y2);
-
-        if (P[2] == 0) {
-            return false;
-        }
-
-        uint Px = inverseMod(P[2], p);
-        Px = mulmod(P[0], mulmod(Px, Px, p), p);
-
-        // bool r = Px % n == rs[0];
-        return Px % n == rs[0];
-    }
-
-    /**
-     * @dev Recover Pchain address from the signature and message
-     */
-
-    function recoverAddress(bytes32 messageHash, uint[2] memory rs, uint[2] memory publicKey, bytes memory pubk, string memory xchain, string memory prefix, uint[] memory hrp) public pure
-    returns(string memory)
-    {
-        bool signVerification = false;
-        string memory msgrply;
-        bytes32 sha = sha256(abi.encodePacked(pubk));
-        bytes20 ripesha = ripemd160(abi.encodePacked(sha));
-        uint[] memory rp = new uint[](20);
-        for(uint i=0;i<20;i++) {
-            rp[i] = uint(uint8(ripesha[i]));
-        }
-        bytes memory pre = bytes(prefix);
-        string memory xc = encode(pre, hrp, convert(rp, 8, 5));
-        if(keccak256(abi.encodePacked(xc)) == keccak256(abi.encodePacked(xchain))) {
-            signVerification = validateSignature(messageHash, rs, publicKey);
-            if(signVerification == true) {
-                msgrply = "Signature verified!";
-            }
-            else {
-                msgrply = "Signature verification failed!";
-            }
-        }
-        else {
-            msgrply = string(abi.encodePacked("Failed: Addresses do not match. Address for this signature/message combination should be ", xc));
-        }
-        return msgrply;
-    }
-
-    /**
-     * @dev Bech32 functions
-     */
+    ////////////////////////////////////////////////////////////////////////
+    // Bech32 functions
 
     function negate(uint256 x) internal pure returns (uint256) {
         return x == 0 ? 0 : ~x + 1;
@@ -496,6 +430,63 @@ contract EC {
         }
 
         return ret;
+    }
+
+    function generalizedPolymod(uint256[] memory values) internal returns (uint256 chk) {
+        chk = 1;
+        for (uint256 i = 0; i < values.length; ++i) {
+            uint256 top = chk >> 25;
+            chk = ((chk & 0x1ffffff) << 5 ^ values[i]) ^
+                (negate((chk >> 0) & 1) & 0x3b6a57b2) ^
+                (negate((chk >> 1) & 1) & 0x26508e6d) ^
+                (negate((chk >> 2) & 1) & 0x1ea119fa) ^
+                (negate((chk >> 3) & 1) & 0x3d4233dd) ^
+                (negate((chk >> 4) & 1) & 0x2a1462b3);
+        }
+    }
+
+    function hrpExpand(bytes memory hrp) internal pure returns (uint256[] memory ret) {
+        ret = new uint256[](hrp.length * 2 + 1);
+        for (uint256 i = 0; i < hrp.length; ++i) {
+            ret[i] = uint256(uint8(hrp[i]) >> 5);
+        }
+        ret[hrp.length] = 0;
+        for (uint256 j = 0; j < hrp.length; ++j) {
+            ret[hrp.length+1+j] = uint256(uint8(hrp[j]) & 31);
+        }
+        return ret;
+    }
+
+    function verifyChecksum(bytes memory hrp, uint256[] memory data) internal pure returns (bool) {
+        uint256[] memory expandedHrp = hrpExpand(hrp);
+        uint256[] memory joined = new uint256[](hrp.length + data.length);
+        for (uint256 i = 0; i < hrp.length; ++i) {
+            joined[i] = expandedHrp[i];
+            joined[hrp.length+i] = data[i];
+        }
+        return generalizedPolymod(joined) == 1;
+    }
+
+    function decode(bytes memory bechBytes) internal pure returns (bytes memory, bool) {
+        if (bechBytes.length > 90) return (new bytes(0), false);
+        for (uint256 i = 0; i < bechBytes.length; i++) {
+            uint8 digit = uint8(bechBytes[i]);
+            if ((digit < 33 || digit > 126) || // wrong char
+                (digit <= 65 && digit <= 90) // upper case
+            ) return (new bytes(0), false);
+        }
+        (uint256 pos, bool found) = BytesLib.indexOf(bechBytes, '1');
+        if (!found || pos == 0 || pos + 7 > bechBytes.length)
+            return (new bytes(0), false);
+        bytes memory hrp = BytesLib.slice(bechBytes, 0, pos);
+        uint256[] memory data = new uint256[](bechBytes.length - pos - 1);
+        for (uint256 i = pos + 1; i < bechBytes.length; ++i) {
+            (uint256 d, bool foundd) = BytesLib.indexOf(CHARSET, bechBytes[i]);
+            if (!foundd) return (new bytes(0), false);
+            data[i] = d;
+        }
+        if (!verifyChecksum(hrp, data)) return (new bytes(0), false);
+        return (BytesLib.slice(data, 0, data.length - 6), true);
     }
 
 

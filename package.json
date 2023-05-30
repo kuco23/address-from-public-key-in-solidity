@@ -27,6 +27,7 @@
     "@typechain/hardhat": "^6.1.5",
     "@typechain/truffle-v5": "^8.0.2",
     "@types/base-x": "^3.0.6",
+    "@types/bech32": "^1.1.4",
     "@types/elliptic": "^6.4.14",
     "@types/jssha": "^3.0.0",
     "@types/mocha": "^10.0.0",

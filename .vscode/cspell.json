@@ -30,6 +30,7 @@
         "topups",
         "undelegate",
         "utxo",
-        "wnat"
+        "wnat",
+        "bech32"
     ]
 }

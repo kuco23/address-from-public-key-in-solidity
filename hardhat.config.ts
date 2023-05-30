@@ -29,6 +29,9 @@ const config: HardhatUserConfig = {
       url: "https://api.avax-test.network/ext/bc/C/rpc",
       chainId: 43113
     }
+  },
+  gasReporter: {
+    enabled: false
   }
 }
 

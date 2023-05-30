@@ -507,4 +507,17 @@ library BytesLib {
 
         return success;
     }
+
+    function indexOf(bytes memory data_, bytes1 char_)
+        internal pure returns (uint256, bool)
+    {
+        unchecked {
+            for (uint256 i = 0; i < data_.length; i++) {
+                if (data_[i] == char_) {
+                    return (i, true);
+                }
+            }
+            return (0, false);
+        }
+    }
 }
